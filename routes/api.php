@@ -12,7 +12,7 @@ Route::put('/user/{id}', [UserController::class, 'updateUser']);
 Route::delete('/user/{id}', [UserController::class, 'deleteUser']);
 
 Route::get('/expenses/{user_id}', [ExpenseController::class, 'getExpenses']);
-Route::post('/expense/create', [ExpenseController::class, 'createExpense']);
+Route::post('/expense/create/{user_id}', [ExpenseController::class, 'createExpense']);
 Route::put('/expense/{user_id}/{id}', [ExpenseController::class, 'updateExpense']);
 Route::delete('/expense/{user_id}/{id}', [ExpenseController::class, 'deleteExpense']);
 

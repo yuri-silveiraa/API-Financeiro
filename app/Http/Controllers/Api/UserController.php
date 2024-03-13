@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Sale;
+use App\Models\Balance;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -26,13 +26,13 @@ class UserController extends Controller
 
     public function createUser(Request $r)
     {
-        $user = $r->all();
-        $created = User::create($user);
+        $created = User::create($r->all());
         if(! $created) {
             return response()->json(['message' => 'Created error'], 400);
         }
-        $createSale = Sale::create()
-        return response()->json($created, 200);
+        $createSale = Balance::create(['user_id' => $created->id, 'amount' => $r->amount]);
+
+        return response()->json([$created, $createSale], 200);
     }
 
     public function updateUser(Request $r, $id)

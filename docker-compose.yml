@@ -29,18 +29,16 @@ services:
 
     # db mysql
     db:
-        image: mysql:5.7.22
-        platform: linux/x86_64
+        image: postgres:latest
         restart: unless-stopped
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-            MYSQL_PASSWORD: ${DB_PASSWORD}
-            MYSQL_USER: ${DB_USERNAME}
+            POSTGRES_DB: ${DB_DATABASE}
+            POSTGRES_USER: ${DB_USERNAME}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
         volumes:
-            - ./.docker/mysql/dbdata:/var/lib/mysql
+            - ./.docker/postgres/dbdata:/var/lib/postgresql/data
         ports:
-            - "3306:3306"
+            - "5432:5432"
         networks:
             - laravel
 

@@ -10,4 +10,14 @@ class Expense extends Model
     use HasFactory;
 
     public $timestamps = false;
+
+    protected $fillable = [
+        'user_id',
+        'description',
+        'category',
+        'payment_method',
+        'payment_date',
+        'paid',
+        'value',
+    ];
 }
