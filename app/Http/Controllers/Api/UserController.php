@@ -3,50 +3,80 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BalanceResource;
 use App\Http\Resources\UserResource;
 use App\Models\Balance;
 use App\Models\User;
+use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+    use HttpResponses;
+
     public function getUsers()
     {
-        return response()->json(UserResource::collection(User::all()), 200);
+        return $this->response('Suceccfully', 200, UserResource::collection(User::all()));
     }
 
     public function getUser($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::find($id);
         if(! $user) {
-            return response()->json(['message' => 'User not found'], 404);
+            return $this->error( 'User not found', 404);
         }
 
-        return response()->json(UserResource::collection($user), 200);
+        return $this->response('Sucessfully', 200, new UserResource($user));
     }
 
     public function createUser(Request $r)
     {
-        $created = User::create($r->all());
+        $validator = Validator::make($r->all(), [
+            'name' => 'required|max:25',
+            'email' => 'required|email',
+            'password' => 'required|max:25',
+            'amount' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Data Invalid', 422, $validator->errors());
+        }
+
+        $created = User::create($validator->validated());
         if(! $created) {
-            return response()->json(['message' => 'Created error'], 400);
+            return $this->error('Created error', 400);
         }
         $createSale = Balance::create(['user_id' => $created->id, 'amount' => $r->amount]);
 
-        return response()->json([$created, $createSale], 200);
+        return $this->response('Create user sucess', 200, [new UserResource($created), new BalanceResource($createSale)]);
     }
 
-    public function updateUser(Request $r, $id)
+    public function updateUser(Request $r, User $user)
     {
-        $user = User::find($id);
         if(! $user) {
-            return response()->json(['message' => 'User not found'], 404);
+            return $this->error( 'User not found', 404);
         }
-        $user->name = $r->name;
-        $user->email = $r->email;
-        $user->save();
 
-        return response()->json([$user], 200);
+        $validator = Validator::make($r->all(), [
+            'name' => 'required|max:25',
+            'email' => 'required|email',
+            'password' => 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Data Invalid', 422, $validator->errors());
+        }
+
+        $validated = $validator->validated();
+
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'] ?? $user->password,
+        ]);
+
+        return response()->json([new UserResource($user)], 200);
     }
 
     public function deleteUser($id)

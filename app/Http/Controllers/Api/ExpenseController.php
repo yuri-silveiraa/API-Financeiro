@@ -21,9 +21,15 @@ class ExpenseController extends Controller
         return response()->json(ExpenseResource::collection(Expense::with('user')->get()), 200);
     }
 
-    public function getExpense(User $user)
+    public function getExpensesToUser(User $user)
     {
-        return response()->json(ExpenseResource::collection(Expense::where('user_id', $user->id)->get()));
+        $expenses = ExpenseResource::collection(Expense::where('user_id', $user->id)->with('user')->get());
+        $totalValue = 0;
+        foreach ($expenses as $expense) {
+            $totalValue += $expense->value;
+        }
+
+        return $this->response('Sucessfully', 200, [$expenses, 'totalValue' => $totalValue]);
     }
 
     public function createExpense(Request $r)
@@ -57,13 +63,12 @@ class ExpenseController extends Controller
         return $this->response('Sucessfully', 200, [new ExpenseResource($created->load('user')), new BalanceResource($balance)]);
     }
 
-    public function updateExpense(Request $r, User $user, Expense $expense)
+    public function updateExpense(Request $r, Expense $expense)
     {
         $validator = Validator::make($r->all(), [
-            'user_id' => 'required',
             'description' => 'nullable|max:50',
             'category' => 'required|max:20',
-            'payment_method' => 'required|max:1',
+            'payment_method' => 'required|max:1|in:'.implode(',', ['D', 'C', 'P']),
             'payment_date' => 'required',
             'paid' => 'required|boolean',
             'value' => 'required|numeric',
@@ -73,19 +78,22 @@ class ExpenseController extends Controller
             return $this->error('Data Invalid', 422, $validator->errors());
         }
 
+        $validated = $validator->validated();
+
         $paid = $expense->paid;
         $value = $expense->value;
         $diff = $expense->value - $r->value;
 
-        $expense->description = $r->description ?? $expense->description;
-        $expense->category = $r->category ?? $expense->category;
-        $expense->paid = $r->paid ?? $expense->paid;
-        $expense->payment_date = $r->payment_date ?? $expense->payment_date;
-        $expense->payment_method = $r->payment_method ?? $expense->payment_method;
-        $expense->value = $r->value ?? $expense->value;
-        $expense->save();
+        $expense->update([
+            'description' => $validated['description'],
+            'category' => $validated['category'],
+            'payment_method' => $validated['payment_method'],
+            'payment_date' => $validated['payment_date'],
+            'paid' => $validated['paid'],
+            'value' => $validated['value'],
+        ]);
 
-        $balance = Balance::where('user_id', $user->id)->first();
+        $balance = Balance::where('user_id', $expense->user_id)->first();
         if ($expense->paid === true) {
             if($expense->paid != $paid) {
                 $balance->amount -= $value;
@@ -97,7 +105,7 @@ class ExpenseController extends Controller
         }
         $balance->save();
 
-        return response()->json([$expense, $balance], 200);
+        return response()->json([new ExpenseResource($expense), new BalanceResource($balance)], 200);
     }
 
     public function deleleExpense($id)
