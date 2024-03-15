@@ -3,51 +3,74 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BalanceResource;
+use App\Http\Resources\ExpenseResource;
 use App\Models\Balance;
 use App\Models\Expense;
 use App\Models\User;
+use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ExpenseController extends Controller
 {
-    public function getExpenses($user_id)
-    {
-        $expenses = Expense::where('user_id', $user_id)->get();
+    use HttpResponses;
 
-        return response()->json($expenses, 200);
+    public function getExpenses()
+    {
+        return response()->json(ExpenseResource::collection(Expense::with('user')->get()), 200);
     }
 
-    public function createExpense(Request $r, $user_id)
+    public function getExpense(User $user)
     {
-        $user = User::Find($user_id);
-        if (! $user) {
-            return response()->json(['message' => 'Not Found User: '.$user_id], 404);
+        return response()->json(ExpenseResource::collection(Expense::where('user_id', $user->id)->get()));
+    }
+
+    public function createExpense(Request $r)
+    {
+        $validator = Validator::make($r->all(), [
+            'user_id' => 'required',
+            'description' => 'nullable|max:50',
+            'category' => 'required|max:20',
+            'payment_method' => 'required|max:1',
+            'payment_date' => 'required',
+            'paid' => 'required|boolean',
+            'value' => 'required|numeric',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Data Invalid', 422, $validator->errors());
         }
 
-        $expense = Expense::create($r->all());
-        if (! $expense) {
-            return response()->json(['message' => 'Could not create'], 400);
+        $created = Expense::create($validator->validated());
+
+        if(! $created) {
+            return $this->error('Something Wrong', 400);
         }
 
-        $balance = Balance::where('user_id', $user->id)->first();
-        if($expense->paid === true) {
-            $balance->amount -= $expense->value;
+        $balance = Balance::where('user_id', $r->get('user_id'))->first();
+        if($created->paid === true) {
+            $balance->amount -= $created->value;
             $balance->save();
         }
 
-        return response()->json([$expense, $balance], 200);
+        return $this->response('Sucessfully', 200, [new ExpenseResource($created->load('user')), new BalanceResource($balance)]);
     }
 
-    public function updateExpense(Request $r, $user_id, $id)
+    public function updateExpense(Request $r, User $user, Expense $expense)
     {
-        $user = User::Find($user_id);
-        if (! $user) {
-            return response()->json(['message' => 'Not Found User: '.$user_id], 404);
-        }
+        $validator = Validator::make($r->all(), [
+            'user_id' => 'required',
+            'description' => 'nullable|max:50',
+            'category' => 'required|max:20',
+            'payment_method' => 'required|max:1',
+            'payment_date' => 'required',
+            'paid' => 'required|boolean',
+            'value' => 'required|numeric',
+        ]);
 
-        $expense = Expense::find($id);
-        if (! $expense) {
-            return response()->json(['message' => 'Not Found Expense: '.$id], 404);
+        if ($validator->fails()) {
+            return $this->error('Data Invalid', 422, $validator->errors());
         }
 
         $paid = $expense->paid;
@@ -63,7 +86,6 @@ class ExpenseController extends Controller
         $expense->save();
 
         $balance = Balance::where('user_id', $user->id)->first();
-
         if ($expense->paid === true) {
             if($expense->paid != $paid) {
                 $balance->amount -= $value;
@@ -73,9 +95,15 @@ class ExpenseController extends Controller
         } elseif ($expense->paid != $paid && $expense->paid === false) {
             $balance->amount += $value;
         }
-
         $balance->save();
 
         return response()->json([$expense, $balance], 200);
+    }
+
+    public function deleleExpense($id)
+    {
+        $deletedExpense = Expense::destroy($id);
+
+        return response()->json(['message' => 'Expense deleted'], 200);
     }
 }

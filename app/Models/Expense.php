@@ -20,4 +20,9 @@ class Expense extends Model
         'paid',
         'value',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\Balance;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ class UserController extends Controller
 {
     public function getUsers()
     {
-        return response()->json(User::all(), 200);
+        return response()->json(UserResource::collection(User::all()), 200);
     }
 
     public function getUser($id)
@@ -21,7 +22,7 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        return response()->json($user, 200);
+        return response()->json(UserResource::collection($user), 200);
     }
 
     public function createUser(Request $r)

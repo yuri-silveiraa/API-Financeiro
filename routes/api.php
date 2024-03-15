@@ -11,12 +11,13 @@ Route::post('/user/create', [UserController::class, 'createUser']);
 Route::put('/user/{id}', [UserController::class, 'updateUser']);
 Route::delete('/user/{id}', [UserController::class, 'deleteUser']);
 
-Route::get('/expenses/{user_id}', [ExpenseController::class, 'getExpenses']);
-Route::post('/expense/create/{user_id}', [ExpenseController::class, 'createExpense']);
-Route::put('/expense/{user_id}/{id}', [ExpenseController::class, 'updateExpense']);
-Route::delete('/expense/{user_id}/{id}', [ExpenseController::class, 'deleteExpense']);
+Route::get('/expenses', [ExpenseController::class, 'getExpenses']);
+Route::get('/expenses/{user}', [ExpenseController::class, 'getExpense']);
+Route::post('/expense/create/{user}', [ExpenseController::class, 'createExpense']);
+Route::put('/expense/{user}/{expense}', [ExpenseController::class, 'updateExpense']);
+Route::delete('/expense/{id}', [ExpenseController::class, 'deleteExpense']);
 
 Route::get('/earnings/{user_id}', [EarningController::class, 'getEarnings']);
 Route::post('/earning/create', [EarningController::class, 'createEarning']);
 Route::put('/earning/{user_id}/{id}', [EarningController::class, 'updateEarning']);
-Route::delete('/earning/{user_id}/{id}', [EarningController::class, 'deleteEarning']);
+Route::delete('/earning/{id}', [EarningController::class, 'deleteEarning']);
