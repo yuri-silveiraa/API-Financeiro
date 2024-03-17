@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BalanceResource;
 use App\Http\Resources\UserResource;
 use App\Models\Balance;
+use App\Models\Earning;
+use App\Models\Expense;
 use App\Models\User;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
@@ -15,12 +17,12 @@ class UserController extends Controller
 {
     use HttpResponses;
 
-    public function getUsers()
+    public function index()
     {
         return $this->response('Suceccfully', 200, UserResource::collection(User::all()));
     }
 
-    public function getUser($id)
+    public function show($id)
     {
         $user = User::find($id);
         if(! $user) {
@@ -30,7 +32,7 @@ class UserController extends Controller
         return $this->response('Sucessfully', 200, new UserResource($user));
     }
 
-    public function createUser(Request $r)
+    public function store(Request $r)
     {
         $validator = Validator::make($r->all(), [
             'name' => 'required|max:25',
@@ -52,7 +54,7 @@ class UserController extends Controller
         return $this->response('Create user sucess', 200, [new UserResource($created), new BalanceResource($createSale)]);
     }
 
-    public function updateUser(Request $r, User $user)
+    public function update(Request $r, User $user)
     {
         if(! $user) {
             return $this->error( 'User not found', 404);
@@ -76,13 +78,19 @@ class UserController extends Controller
             'password' => $validated['password'] ?? $user->password,
         ]);
 
-        return response()->json([new UserResource($user)], 200);
+        return $this->response('Updated Sucess', 200, new UserResource($user));
     }
 
-    public function deleteUser($id)
+    public function destroy($id)
     {
-        User::destroy($id);
+        Expense::where('user_id', $id)->detele();
+        Earning::where('user_id', $id)->detele();
+        Balance::destroy($id);
+        $deleted = User::destroy($id);
+        if (! $deleted) {
+            return $this->error('Failed to delete user', 422);
+        }
 
-        return response()->json(['message' => 'User deleted'], 200);
+        return $this->response('Deleted user Sucessfuly', 200);
     }
 }

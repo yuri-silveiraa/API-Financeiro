@@ -7,7 +7,6 @@ use App\Http\Resources\BalanceResource;
 use App\Http\Resources\ExpenseResource;
 use App\Models\Balance;
 use App\Models\Expense;
-use App\Models\User;
 use App\Traits\HttpResponses;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -16,30 +15,30 @@ class ExpenseController extends Controller
 {
     use HttpResponses;
 
-    public function getExpenses()
+    public function index()
     {
-        return response()->json(ExpenseResource::collection(Expense::with('user')->get()), 200);
+        return $this->response('Sucessfully', 200, ExpenseResource::collection(Expense::with('user')->get()));
     }
 
-    public function getExpensesToUser(User $user)
+    public function show(string $id)
     {
-        $expenses = ExpenseResource::collection(Expense::where('user_id', $user->id)->with('user')->get());
+        $expenses = ExpenseResource::collection(Expense::where('user_id', $id)->with('user')->get());
         $totalValue = 0;
         foreach ($expenses as $expense) {
             $totalValue += $expense->value;
         }
 
-        return $this->response('Sucessfully', 200, [$expenses, 'totalValue' => $totalValue]);
+        return $this->response('Sucessfully', 200, [$expenses, 'totalValue' => 'R$'.number_format($totalValue, 2, ',', '.')]);
     }
 
-    public function createExpense(Request $r)
+    public function store(Request $r)
     {
         $validator = Validator::make($r->all(), [
             'user_id' => 'required',
             'description' => 'nullable|max:50',
             'category' => 'required|max:20',
             'payment_method' => 'required|max:1',
-            'payment_date' => 'required',
+            'payment_date' => 'nullable',
             'paid' => 'required|boolean',
             'value' => 'required|numeric',
         ]);
@@ -54,8 +53,8 @@ class ExpenseController extends Controller
             return $this->error('Something Wrong', 400);
         }
 
-        $balance = Balance::where('user_id', $r->get('user_id'))->first();
         if($created->paid === true) {
+            $balance = Balance::where('user_id', $r->get('user_id'))->first();
             $balance->amount -= $created->value;
             $balance->save();
         }
@@ -63,15 +62,18 @@ class ExpenseController extends Controller
         return $this->response('Sucessfully', 200, [new ExpenseResource($created->load('user')), new BalanceResource($balance)]);
     }
 
-    public function updateExpense(Request $r, Expense $expense)
+    public function update(Request $r, Expense $expense)
     {
+        $paidBefore = $expense->paid;
+        $valueBefore = $expense->value;
+
         $validator = Validator::make($r->all(), [
             'description' => 'nullable|max:50',
-            'category' => 'required|max:20',
-            'payment_method' => 'required|max:1|in:'.implode(',', ['D', 'C', 'P']),
-            'payment_date' => 'required',
-            'paid' => 'required|boolean',
-            'value' => 'required|numeric',
+            'category' => 'nullabe|max:20',
+            'payment_method' => 'nullable|max:1|in:'.implode(',', ['D', 'C', 'P']),
+            'payment_date' => 'nullable',
+            'paid' => 'nullable|boolean',
+            'value' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -80,38 +82,58 @@ class ExpenseController extends Controller
 
         $validated = $validator->validated();
 
-        $paid = $expense->paid;
-        $value = $expense->value;
-        $diff = $expense->value - $r->value;
-
-        $expense->update([
-            'description' => $validated['description'],
-            'category' => $validated['category'],
-            'payment_method' => $validated['payment_method'],
-            'payment_date' => $validated['payment_date'],
-            'paid' => $validated['paid'],
-            'value' => $validated['value'],
+        $updated = $expense->update([
+            'description' => $validated['description'] ?? $expense->description,
+            'category' => $validated['category'] ?? $expense->category,
+            'payment_method' => $validated['payment_method'] ?? $expense->payment_method,
+            'payment_date' => $validated['payment_date'] ?? $expense->payment_date,
+            'paid' => $validated['paid'] ?? $expense->paid,
+            'value' => $validated['value'] ?? $expense->value,
         ]);
+        if (! $updated) {
+            return $this->error('Something wrong', 422);
+        }
 
+        $diff = $valueBefore - $expense->value;
         $balance = Balance::where('user_id', $expense->user_id)->first();
-        if ($expense->paid === true) {
-            if($expense->paid != $paid) {
-                $balance->amount -= $value;
-            } else {
+
+        switch(true) {
+            case $expense->paid === true && $expense->paid != $paidBefore && $expense->value == $valueBefore:
+                $balance->amount -= $valueBefore;
+                break;
+
+            case $expense->paid === true && $expense->paid !== $paidBefore && $expense->value != $valueBefore:
+                $balance->amount -= $expense->value;
+                break;
+
+            case $expense->paid === true && $expense->paid === $paidBefore:
                 $balance->amount += $diff;
-            }
-        } elseif ($expense->paid != $paid && $expense->paid === false) {
-            $balance->amount += $value;
+                break;
+
+            case $expense->paid === false && $expense->paid != $paidBefore:
+                $balance->amount += $valueBefore;
         }
         $balance->save();
 
-        return response()->json([new ExpenseResource($expense), new BalanceResource($balance)], 200);
+        return $this->response('Updated Sucess', 200, [new ExpenseResource($expense), new BalanceResource($balance)]);
     }
 
-    public function deleleExpense($id)
+    public function destroy(Expense $expense)
     {
-        $deletedExpense = Expense::destroy($id);
+        $value = 0;
 
-        return response()->json(['message' => 'Expense deleted'], 200);
+        if($expense->paid === true) {
+            $value = $expense->value;
+        }
+        $balance = Balance::where('user_id', $expense->user_id)->first();
+
+        if (! $expense->delete()) {
+            return $this->error('Failed to delete expense', 400);
+        }
+
+        $balance->amount += $value;
+        $balance->save();
+
+        return $this->response('Expense Deleted', 200, new BalanceResource($balance));
     }
 }

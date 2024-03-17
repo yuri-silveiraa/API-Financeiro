@@ -13,7 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users');
             $table->text('description');
-            $table->date('payment_date');
+            $table->date('payment_date')->default(date('d/m/Y'));
             $table->decimal('value', 10, 2);
         });
     }
