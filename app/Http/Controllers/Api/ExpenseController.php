@@ -15,11 +15,6 @@ class ExpenseController extends Controller
 {
     use HttpResponses;
 
-    // public function index()
-    // {
-    //     return $this->response('Sucessfully', 200, ExpenseResource::collection(Expense::with('user')->get()));
-    // }
-
     public function index(Request $r)
     {
         $expenses = (new Expense())->filter($r);
@@ -33,6 +28,7 @@ class ExpenseController extends Controller
 
     public function store(Request $r)
     {
+
         $validator = Validator::make($r->all(), [
             'user_id' => 'required',
             'description' => 'nullable|max:50',

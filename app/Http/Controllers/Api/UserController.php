@@ -17,6 +17,11 @@ class UserController extends Controller
 {
     use HttpResponses;
 
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum')->only(['update', 'destroy']);
+    }
+
     public function index()
     {
         return $this->response('Suceccfully', 200, UserResource::collection(User::all()));
@@ -45,7 +50,13 @@ class UserController extends Controller
             return $this->error('Data Invalid', 422, $validator->errors());
         }
 
-        $created = User::create($validator->validated());
+        $validated = $validator->validated();
+
+        $created = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => password_hash($validated['password'], PASSWORD_DEFAULT),
+        ]);
         if(! $created) {
             return $this->error('Created error', 400);
         }
@@ -75,7 +86,7 @@ class UserController extends Controller
         $user->update([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => $validated['password'] ?? $user->password,
+            'password' => password_hash($validated['password'], PASSWORD_DEFAULT) ?? $user->password,
         ]);
 
         return $this->response('Updated Sucess', 200, new UserResource($user));
