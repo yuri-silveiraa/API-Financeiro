@@ -29,9 +29,9 @@ class Expense extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function filter(Request $r)
+    public function filter(Request $req)
     {
-        $queryFilter = (new ExpenseFilter)->filter($r);
+        $queryFilter = (new ExpenseFilter)->filter($req);
 
         if(empty($queryFilter)) {
             return ExpenseResource::collection(Expense::with('user')->get());

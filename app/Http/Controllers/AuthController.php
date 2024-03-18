@@ -10,12 +10,11 @@ class AuthController extends Controller
 {
     use HttpResponses;
 
-    // 2|PrklJcExSEoIDEU4Xtm3DaK2lQMbJiyWMauja5GR40d440f3
-    public function login(Request $r)
+    public function login(Request $req)
     {
-        if(Auth::attempt($r->only(['email', 'password']))) {
+        if(Auth::attempt($req->only(['email', 'password']))) {
             return $this->response('authorized', 200, [
-                'token' => $r->user()->createToken('all', ['all-index', 'all-create', 'all-update', 'all-delete'])->plainTextToken,
+                'token' => $req->user()->createToken('all', ['all-index', 'all-create', 'all-update', 'all-delete'])->plainTextToken,
             ]);
         }
 
@@ -23,8 +22,8 @@ class AuthController extends Controller
 
     }
 
-    public function logout()
+    public function logout(Request $req)
     {
-
+        $req->user()->currentAccessToken()->delete();
     }
 }

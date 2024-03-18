@@ -10,6 +10,7 @@ Route::apiResource('/users', UserController::class);
 Route::middleware(['auth:sanctum', 'ability:all-index,all-create,all-update,all-delete'])->group(function () {
     Route::apiResource('/expenses', ExpenseController::class);
     Route::apiResource('/earnings', EarningController::class);
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
 
 Route::post('/login', [AuthController::class, 'login']);

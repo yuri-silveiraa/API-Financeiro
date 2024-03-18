@@ -31,9 +31,9 @@ class EarningController extends Controller
         return $this->response('Sucessfully', 200, [$earnings, 'totalValue' => 'R$'.number_format($totalValue, 2, ',', '.')]);
     }
 
-    public function store(Request $r)
+    public function store(Request $req)
     {
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'user_id' => 'required',
             'description' => 'nullable|max:30',
             'payment_date' => 'nullable',
@@ -50,7 +50,7 @@ class EarningController extends Controller
             return $this->error('Something Wrong', 400);
         }
 
-        $balance = Balance::where('user_id', $r->get('user_id'))->first();
+        $balance = Balance::where('user_id', $req->get('user_id'))->first();
         $balance->amount += $created->value;
         $balance->save();
 
@@ -61,11 +61,11 @@ class EarningController extends Controller
 
     }
 
-    public function update(Request $r, Earning $earning)
+    public function update(Request $req, Earning $earning)
     {
         $valueBefore = $earning->value;
 
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'description' => 'nullable|max:50',
             'payment_date' => 'nullable',
             'value' => 'nullable|numeric',

@@ -37,9 +37,9 @@ class UserController extends Controller
         return $this->response('Sucessfully', 200, new UserResource($user));
     }
 
-    public function store(Request $r)
+    public function store(Request $req)
     {
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'name' => 'required|max:25',
             'email' => 'required|email',
             'password' => 'required|max:25',
@@ -60,18 +60,18 @@ class UserController extends Controller
         if(! $created) {
             return $this->error('Created error', 400);
         }
-        $createSale = Balance::create(['user_id' => $created->id, 'amount' => $r->amount]);
+        $createSale = Balance::create(['user_id' => $created->id, 'amount' => $req->amount]);
 
         return $this->response('Create user sucess', 200, [new UserResource($created), new BalanceResource($createSale)]);
     }
 
-    public function update(Request $r, User $user)
+    public function update(Request $req, User $user)
     {
         if(! $user) {
             return $this->error( 'User not found', 404);
         }
 
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'name' => 'required|max:25',
             'email' => 'required|email',
             'password' => 'nullable',

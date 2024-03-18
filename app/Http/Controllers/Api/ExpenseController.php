@@ -15,9 +15,9 @@ class ExpenseController extends Controller
 {
     use HttpResponses;
 
-    public function index(Request $r)
+    public function index(Request $req)
     {
-        $expenses = (new Expense())->filter($r);
+        $expenses = (new Expense())->filter($req);
         $totalValue = 0;
         foreach ($expenses as $expense) {
             $totalValue += $expense->value;
@@ -26,10 +26,10 @@ class ExpenseController extends Controller
         return $this->response('Sucessfully', 200, [$expenses, 'totalValue' => 'R$'.number_format($totalValue, 2, ',', '.')]);
     }
 
-    public function store(Request $r)
+    public function store(Request $req)
     {
 
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'user_id' => 'required',
             'description' => 'nullable|max:50',
             'category' => 'required|max:20',
@@ -50,7 +50,7 @@ class ExpenseController extends Controller
         }
 
         if($created->paid === true) {
-            $balance = Balance::where('user_id', $r->get('user_id'))->first();
+            $balance = Balance::where('user_id', $req->get('user_id'))->first();
             $balance->amount -= $created->value;
             $balance->save();
         }
@@ -58,12 +58,12 @@ class ExpenseController extends Controller
         return $this->response('Sucessfully', 200, [new ExpenseResource($created->load('user')), new BalanceResource($balance)]);
     }
 
-    public function update(Request $r, Expense $expense)
+    public function update(Request $req, Expense $expense)
     {
         $paidBefore = $expense->paid;
         $valueBefore = $expense->value;
 
-        $validator = Validator::make($r->all(), [
+        $validator = Validator::make($req->all(), [
             'description' => 'nullable|max:50',
             'category' => 'nullabe|max:20',
             'payment_method' => 'nullable|max:1|in:'.implode(',', ['D', 'C', 'P']),
@@ -108,6 +108,7 @@ class ExpenseController extends Controller
 
             case $expense->paid === false && $expense->paid != $paidBefore:
                 $balance->amount += $valueBefore;
+                break;
         }
         $balance->save();
 

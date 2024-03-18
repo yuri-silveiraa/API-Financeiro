@@ -20,7 +20,7 @@ abstract class Filter
         'in' => 'in',
     ];
 
-    public function filter(Request $r)
+    public function filter(Request $req)
     {
         $where = [];
         $whereIn = [];
@@ -30,7 +30,7 @@ abstract class Filter
         }
 
         foreach ($this->allowedOperatorsFields as $param => $operators) {
-            $queryOperator = $r->query($param);
+            $queryOperator = $req->query($param);
             if($queryOperator) {
                 foreach ($queryOperator as $operator => $value) {
                     if(! in_array($operator, $operators)) {
