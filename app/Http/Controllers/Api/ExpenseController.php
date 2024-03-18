@@ -15,14 +15,14 @@ class ExpenseController extends Controller
 {
     use HttpResponses;
 
-    public function index()
-    {
-        return $this->response('Sucessfully', 200, ExpenseResource::collection(Expense::with('user')->get()));
-    }
+    // public function index()
+    // {
+    //     return $this->response('Sucessfully', 200, ExpenseResource::collection(Expense::with('user')->get()));
+    // }
 
-    public function show(string $id)
+    public function index(Request $r)
     {
-        $expenses = ExpenseResource::collection(Expense::where('user_id', $id)->with('user')->get());
+        $expenses = (new Expense())->filter($r);
         $totalValue = 0;
         foreach ($expenses as $expense) {
             $totalValue += $expense->value;
